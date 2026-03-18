@@ -1,0 +1,155 @@
+{
+  "landing": {
+    "badge": "New: AI-powered content recommendations",
+    "hero": {
+      "title1": "Share your world,",
+      "title2": "one moment at a time",
+      "description": "Join millions of creators sharing stories, connecting with friends, and discovering content that inspires. Your journey starts here.",
+      "cta": "Start for free",
+      "learnMore": "Learn more",
+      "joinedThisWeek": "creators joined this week"
+    },
+    "nav": {
+      "features": "Features",
+      "stats": "Stats",
+      "testimonials": "Testimonials",
+      "signIn": "Sign In",
+      "getStarted": "Get Started"
+    },
+    "features": {
+      "title": "Everything you need to",
+      "titleHighlight": "connect",
+      "description": "Powerful features designed to help you share, connect, and grow your community.",
+      "items": {
+        "stories": {
+          "title": "Share Stories",
+          "description": "Post photos, videos, and stories that disappear after 24 hours."
+        },
+        "community": {
+          "title": "Build Community",
+          "description": "Connect with creators and people who share your interests."
+        },
+        "messages": {
+          "title": "Direct Messages",
+          "description": "Private conversations with end-to-end encryption."
+        },
+        "live": {
+          "title": "Live Video",
+          "description": "Go live and interact with your followers in real-time."
+        },
+        "engagement": {
+          "title": "Engagement",
+          "description": "Like, comment, and save posts from your favorite creators."
+        },
+        "explore": {
+          "title": "Explore",
+          "description": "Discover trending content and new accounts to follow."
+        }
+      }
+    },
+    "stats": {
+      "users": "Active Users",
+      "posts": "Posts Shared",
+      "stories": "Daily Stories",
+      "uptime": "Uptime"
+    },
+    "testimonials": {
+      "title": "Loved by",
+      "titleHighlight": "creators",
+      "description": "See what our community has to say about JSGram.",
+      "items": {
+        "1": {
+          "content": "JSGram has completely transformed how I connect with my audience. The engagement is incredible!",
+          "author": "Sarah Chen",
+          "role": "Content Creator"
+        },
+        "2": {
+          "content": "The best social platform I've used. Clean interface, fast, and the community is amazing.",
+          "author": "Alex Rodriguez",
+          "role": "Photographer"
+        },
+        "3": {
+          "content": "Finally a platform that respects privacy while delivering an amazing user experience.",
+          "author": "Maria Johnson",
+          "role": "Digital Artist"
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to get started?",
+      "description": "Join millions of creators and start sharing your story today. It's free to join.",
+      "createAccount": "Create free account",
+      "signIn": "Sign in"
+    },
+    "footer": {
+      "description": "Share your world, one moment at a time. Connect with friends and discover amazing content.",
+      "product": "Product",
+      "features": "Features",
+      "pricing": "Pricing",
+      "api": "API",
+      "integrations": "Integrations",
+      "company": "Company",
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "press": "Press",
+      "legal": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "security": "Security",
+      "cookies": "Cookies",
+      "copyright": "All rights reserved."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "description": "Enter your credentials to access your account",
+      "emailLabel": "Email or Username",
+      "emailPlaceholder": "Enter your email or username",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "submitting": "Signing in...",
+      "orContinue": "Or continue with",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "register": {
+      "title": "Create an account",
+      "description": "Enter your details to get started with JSGram",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm",
+      "submit": "Create Account",
+      "submitting": "Creating account...",
+      "orContinue": "Or continue with",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "terms": "By creating an account, you agree to our",
+      "termsLink": "Terms",
+      "and": "and",
+      "privacyLink": "Privacy Policy"
+    },
+    "branding": {
+      "title": "Share your moments with the world",
+      "description": "Join millions of people who use JSGram to connect with friends, share photos, and discover new content every day."
+    }
+  },
+  "common": {
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "en": "English",
+      "ru": "Русский",
+      "uz": "O'zbek"
+    }
+  }
+}

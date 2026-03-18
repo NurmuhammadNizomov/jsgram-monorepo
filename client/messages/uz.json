@@ -1,0 +1,155 @@
+{
+  "landing": {
+    "badge": "Yangi: Sun'iy intellekt asosidagi tavsiyalar",
+    "hero": {
+      "title1": "Dunyongizni ulashing,",
+      "title2": "bir lahza bir vaqtda",
+      "description": "Hikoyalar ulashayotgan, do'stlar bilan bog'lanayotgan va ilhomlantiruvchi kontent kashf etayotgan millionlab ijodkorlarga qo'shiling. Sayohatingiz shu yerdan boshlanadi.",
+      "cta": "Bepul boshlash",
+      "learnMore": "Batafsil",
+      "joinedThisWeek": "ijodkor shu hafta qo'shildi"
+    },
+    "nav": {
+      "features": "Imkoniyatlar",
+      "stats": "Statistika",
+      "testimonials": "Fikrlar",
+      "signIn": "Kirish",
+      "getStarted": "Boshlash"
+    },
+    "features": {
+      "title": "Bog'lanish uchun",
+      "titleHighlight": "kerak bo'lgan hamma narsa",
+      "description": "Ulashish, bog'lanish va hamjamiyatingizni rivojlantirish uchun yaratilgan kuchli imkoniyatlar.",
+      "items": {
+        "stories": {
+          "title": "Hikoyalar ulashing",
+          "description": "24 soatdan keyin yo'qoladigan rasm, video va hikoyalar joylashtiring."
+        },
+        "community": {
+          "title": "Hamjamiyat yarating",
+          "description": "Qiziqishlari bir xil bo'lgan ijodkorlar va odamlar bilan bog'laning."
+        },
+        "messages": {
+          "title": "Shaxsiy xabarlar",
+          "description": "Uchidan uchigacha shifrlangan maxfiy suhbatlar."
+        },
+        "live": {
+          "title": "Jonli efir",
+          "description": "Jonli efirga chiqing va obunachilaringiz bilan real vaqtda muloqot qiling."
+        },
+        "engagement": {
+          "title": "Faollik",
+          "description": "Sevimli ijodkorlaringizning postlariga layk, izoh qoldiring va saqlang."
+        },
+        "explore": {
+          "title": "Kashf qiling",
+          "description": "Trendagi kontentni va yangi akkauntlarni kashf qiling."
+        }
+      }
+    },
+    "stats": {
+      "users": "Faol foydalanuvchilar",
+      "posts": "Ulashilgan postlar",
+      "stories": "Kunlik hikoyalar",
+      "uptime": "Ishlash vaqti"
+    },
+    "testimonials": {
+      "title": "Ijodkorlar",
+      "titleHighlight": "tomonidan sevilgan",
+      "description": "Hamjamiyatimiz JSGram haqida nima deyishini ko'ring.",
+      "items": {
+        "1": {
+          "content": "JSGram auditoriyam bilan bog'lanish usulimni butunlay o'zgartirdi. Faollik ajoyib!",
+          "author": "Sara Chen",
+          "role": "Kontent yaratuvchi"
+        },
+        "2": {
+          "content": "Men foydalangan eng yaxshi ijtimoiy platforma. Toza interfeys, tez va hamjamiyat ajoyib.",
+          "author": "Aleks Rodriges",
+          "role": "Fotograf"
+        },
+        "3": {
+          "content": "Nihoyat maxfiylikni hurmat qiladigan va ajoyib foydalanuvchi tajribasini taqdim etadigan platforma.",
+          "author": "Mariya Jonson",
+          "role": "Raqamli rassom"
+        }
+      }
+    },
+    "cta": {
+      "title": "Boshlashga tayyormisiz?",
+      "description": "Millionlab ijodkorlarga qo'shiling va bugun hikoyangizni ulashishni boshlang. Qo'shilish bepul.",
+      "createAccount": "Bepul akkaunt yaratish",
+      "signIn": "Kirish"
+    },
+    "footer": {
+      "description": "Dunyongizni ulashing, bir lahza bir vaqtda. Do'stlaringiz bilan bog'laning va ajoyib kontentlarni kashf qiling.",
+      "product": "Mahsulot",
+      "features": "Imkoniyatlar",
+      "pricing": "Narxlar",
+      "api": "API",
+      "integrations": "Integratsiyalar",
+      "company": "Kompaniya",
+      "about": "Biz haqimizda",
+      "blog": "Blog",
+      "careers": "Karyera",
+      "press": "Matbuot",
+      "legal": "Huquqiy",
+      "privacy": "Maxfiylik",
+      "terms": "Shartlar",
+      "security": "Xavfsizlik",
+      "cookies": "Cookie",
+      "copyright": "Barcha huquqlar himoyalangan."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Xush kelibsiz",
+      "description": "Akkauntingizga kirish uchun ma'lumotlaringizni kiriting",
+      "emailLabel": "Email yoki foydalanuvchi nomi",
+      "emailPlaceholder": "Email yoki foydalanuvchi nomini kiriting",
+      "passwordLabel": "Parol",
+      "passwordPlaceholder": "Parolni kiriting",
+      "forgotPassword": "Parolni unutdingizmi?",
+      "submit": "Kirish",
+      "submitting": "Kirish...",
+      "orContinue": "Yoki davom eting",
+      "noAccount": "Akkauntingiz yo'qmi?",
+      "signUp": "Ro'yxatdan o'tish"
+    },
+    "register": {
+      "title": "Akkaunt yaratish",
+      "description": "JSGram'da boshlash uchun ma'lumotlaringizni kiriting",
+      "firstName": "Ism",
+      "lastName": "Familiya",
+      "username": "Foydalanuvchi nomi",
+      "email": "Email",
+      "password": "Parol",
+      "confirmPassword": "Tasdiqlash",
+      "submit": "Akkaunt yaratish",
+      "submitting": "Yaratilmoqda...",
+      "orContinue": "Yoki davom eting",
+      "hasAccount": "Akkauntingiz bormi?",
+      "signIn": "Kirish",
+      "terms": "Akkaunt yaratish orqali siz bizning",
+      "termsLink": "Shartlar",
+      "and": "va",
+      "privacyLink": "Maxfiylik siyosati"
+    },
+    "branding": {
+      "title": "Lahzalaringizni dunyo bilan ulashing",
+      "description": "Do'stlar bilan bog'lanish, suratlar ulashish va har kuni yangi kontent kashf qilish uchun JSGram'dan foydalanadigan millionlab odamlarga qo'shiling."
+    }
+  },
+  "common": {
+    "theme": {
+      "light": "Yorug'",
+      "dark": "Qorong'u",
+      "system": "Tizim"
+    },
+    "language": {
+      "en": "English",
+      "ru": "Русский",
+      "uz": "O'zbek"
+    }
+  }
+}
