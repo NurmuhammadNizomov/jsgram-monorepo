@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { RightPanel } from "@/components/layout/RightPanel";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthStore((s) => s.isInitialized);
@@ -31,14 +30,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-background">
       <Sidebar />
 
-      <div className="md:ml-16 xl:ml-64 flex justify-center">
-        <main className="w-full max-w-[600px] min-h-screen border-x border-border">
+      {/* Content area — offset sidebar, content centered with max-width */}
+      <div className="md:ml-16 xl:ml-64 flex justify-center px-0">
+        <main className="w-full max-w-[860px] min-h-screen border-x border-border">
           {children}
         </main>
-
-        <div className="hidden lg:block pl-6 pt-4 sticky top-0 h-screen overflow-y-auto">
-          <RightPanel />
-        </div>
       </div>
 
       {/* Mobile bottom bar spacer */}

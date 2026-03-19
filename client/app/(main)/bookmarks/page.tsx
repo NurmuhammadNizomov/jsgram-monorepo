@@ -1,105 +1,133 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bookmark, LayoutGrid, List, Heart, MessageCircle, Repeat2, Trash2 } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, Bookmark, LayoutGrid, List, Loader2, BookmarkX } from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import { PostAPI } from "@/lib/social";
+import type { Post } from "@/types/social";
+import { toast } from "sonner";
 
-const SAVED = [
-  { id: 1, user: { name: "Sardor T.", username: "sardor_codes" }, time: "2d", content: "TypeScript tip: use `satisfies` operator to get the best of both type inference and type checking. Game changer!", image: false, likes: 891, comments: 67 },
-  { id: 2, user: { name: "Kamola E.", username: "kamola_ux" }, time: "3d", content: "Golden hour shoot in Tashkent 📸", image: true, color: "from-orange-300 to-rose-400", likes: 2340, comments: 89 },
-  { id: 3, user: { name: "Dilnoza Y.", username: "dilnoza_dev" }, time: "5d", content: "Just shipped a new feature in JSGram! Real-time notifications are live. 🚀", image: false, likes: 142, comments: 28 },
-  { id: 4, user: { name: "Jasur M.", username: "jasur_ui" }, time: "1w", content: "Design systems are not about consistency — they're about velocity.", image: true, color: "from-violet-400 to-indigo-500", likes: 567, comments: 44 },
-  { id: 5, user: { name: "Malika H.", username: "malika_h" }, time: "2w", content: "Morning coffee + good music + open-source contribution. Perfect Saturday. ☕", image: false, likes: 321, comments: 15 },
-  { id: 6, user: { name: "Bobur A.", username: "bobur_a" }, time: "2w", content: "Mountains of Chimgan 🏔️ #nature #uzbekistan", image: true, color: "from-emerald-400 to-teal-500", likes: 1204, comments: 56 },
-];
+dayjs.extend(relativeTime);
 
 export default function BookmarksPage() {
   const [view, setView] = useState<"list" | "grid">("list");
-  const [saved, setSaved] = useState(SAVED);
+  const qc = useQueryClient();
 
-  const remove = (id: number) => setSaved(prev => prev.filter(p => p.id !== id));
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ["bookmarks"],
+    queryFn: ({ pageParam = 1 }) => PostAPI.getBookmarks(pageParam as number).then((r) => r.data),
+    initialPageParam: 1,
+    getNextPageParam: (page) => (page as Post[]).length === 20 ? undefined : undefined,
+  });
+
+  const unbookmarkMut = useMutation({
+    mutationFn: (id: string) => PostAPI.toggleBookmark(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+      toast.success("Removed from bookmarks");
+    },
+  });
+
+  const posts = data?.pages.flat() ?? [];
 
   return (
     <div>
-      {/* Header */}
-      <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border z-10 px-4 py-3 flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-lg">Bookmarks</h1>
-          <p className="text-xs text-muted-foreground">{saved.length} saved posts</p>
-        </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          <button
-            onClick={() => setView("list")}
-            className={`p-1.5 rounded-md transition-colors ${view === "list" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-5 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold">Bookmarks</h1>
+        <div className="flex items-center gap-1">
+          <Button variant={view === "list" ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setView("list")}>
             <List className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setView("grid")}
-            className={`p-1.5 rounded-md transition-colors ${view === "grid" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
+          </Button>
+          <Button variant={view === "grid" ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setView("grid")}>
             <LayoutGrid className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
-      {saved.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Bookmark className="w-10 h-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No saved posts yet</p>
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Bookmark className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No saved posts yet</p>
+          <p className="text-sm">Posts you save will appear here</p>
         </div>
-      ) : view === "list" ? (
-        /* List view — Twitter style */
-        <div>
-          {saved.map(post => (
-            <article key={post.id} className="flex gap-3 px-4 py-3 border-b border-border hover:bg-accent/20 transition-colors group">
-              <Avatar className="w-9 h-9 flex-shrink-0">
-                <AvatarFallback className="text-xs">{post.user.name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="font-semibold text-sm">{post.user.name}</span>
-                  <span className="text-muted-foreground text-xs">@{post.user.username} · {post.time}</span>
-                  <button
-                    onClick={() => remove(post.id)}
-                    className="ml-auto opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+      ) : view === "grid" ? (
+        <div className="grid grid-cols-3 gap-0.5 p-0.5">
+          {posts.map((post) => (
+            <div key={post._id} className="relative aspect-square group cursor-pointer bg-muted">
+              {post.images[0] ? (
+                <img src={post.images[0].url} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-2">
+                  <p className="text-xs text-muted-foreground line-clamp-4">{post.content}</p>
                 </div>
-                <p className="text-sm leading-relaxed mb-2">{post.content}</p>
-                {"color" in post && post.color && (
-                  <div className={`rounded-xl bg-gradient-to-br ${post.color} h-36 w-full mb-2`} />
-                )}
-                <div className="flex items-center gap-4 text-muted-foreground text-xs">
-                  <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{post.likes}</span>
-                  <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" />{post.comments}</span>
-                  <span className="flex items-center gap-1 ml-auto text-primary"><Bookmark className="w-3.5 h-3.5 fill-current" /></span>
-                </div>
+              )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3 text-white text-sm">
+                <span className="flex items-center gap-1"><Heart className="w-4 h-4" />{post.likesCount}</span>
+                <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{post.commentsCount}</span>
               </div>
-            </article>
+              <button
+                className="absolute top-2 right-2 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                onClick={() => unbookmarkMut.mutate(post._id)}
+              >
+                <BookmarkX className="w-4 h-4 text-white" />
+              </button>
+            </div>
           ))}
         </div>
       ) : (
-        /* Grid view — Instagram style */
-        <div className="grid grid-cols-3 gap-0.5 p-0.5">
-          {saved.map(post => (
-            <div key={post.id} className="aspect-square relative group cursor-pointer">
-              {"color" in post && post.color ? (
-                <div className={`w-full h-full bg-gradient-to-br ${post.color}`} />
-              ) : (
-                <div className="w-full h-full bg-muted flex items-center justify-center p-3">
-                  <p className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-4">
-                    {post.content}
-                  </p>
+        <div>
+          {posts.map((post) => {
+            const authorName = [post.author.firstName, post.author.lastName].filter(Boolean).join(" ") || post.author.username;
+            return (
+              <article key={post._id} className="px-5 py-4 border-b border-border hover:bg-muted/30 transition-colors">
+                <div className="flex gap-3">
+                  <Avatar className="w-10 h-10 flex-shrink-0">
+                    <AvatarImage src={post.author.avatar ?? ""} />
+                    <AvatarFallback>{authorName[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm">{authorName}</span>
+                      <span className="text-muted-foreground text-sm">@{post.author.username}</span>
+                      <span className="text-muted-foreground text-sm">·</span>
+                      <span className="text-muted-foreground text-sm">{dayjs(post.createdAt).fromNow()}</span>
+                    </div>
+                    {post.content && <p className="text-sm mt-1">{post.content}</p>}
+                    {post.images[0] && (
+                      <img src={post.images[0].url} className="mt-2 rounded-xl max-h-64 w-full object-cover" alt="" />
+                    )}
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Heart className="w-4 h-4" />{post.likesCount}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MessageCircle className="w-4 h-4" />{post.commentsCount}
+                      </span>
+                      <button
+                        className="flex items-center gap-1.5 text-sm text-primary ml-auto hover:text-muted-foreground transition-colors"
+                        onClick={() => unbookmarkMut.mutate(post._id)}
+                      >
+                        <Bookmark className="w-4 h-4 fill-current" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-xs">
-                <span className="flex items-center gap-1"><Heart className="w-4 h-4 fill-current" />{post.likes}</span>
-                <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{post.comments}</span>
-              </div>
+              </article>
+            );
+          })}
+          {hasNextPage && (
+            <div className="flex justify-center py-6">
+              <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load more"}
+              </Button>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>

@@ -106,10 +106,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: request.originalUrl ?? request.url,
       method: request.method,
     };
-
-    // Log response
-    log.response(request, status);
-
     response.status(status).json(errorResponse);
   }
 }

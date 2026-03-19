@@ -3,16 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import compression from 'compression';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import type { Express, NextFunction, Request, Response } from 'express';
 import { log } from './logger';
 import { getRequestLang, t } from '../common/i18n/i18n';
 
 const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  log.request(req);
-  res.on('finish', () => {
-    log.response(req, res.statusCode, Date.now() - startTime);
-  });
   next();
 };
 
@@ -23,6 +20,7 @@ export const setupMiddleware = async (app: INestApplication): Promise<void> => {
   const isProd = nodeEnv === 'production';
 
   app.use(requestLogger);
+  app.use(cookieParser());
 
   app.use(helmet({
     crossOriginEmbedderPolicy: false,

@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Conversation, ConversationDocument } from '../../models/conversation.model';
 import { Message, MessageDocument } from '../../models/message.model';
 import { User, UserDocument } from '../../models/user.model';
+import { BlockService } from '../block/block.service';
 
 @Injectable()
 export class ChatService {
@@ -11,6 +12,7 @@ export class ChatService {
     @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly blockService: BlockService,
   ) {}
 
   // Get or create 1-to-1 conversation
@@ -20,32 +22,58 @@ export class ChatService {
     const me = new Types.ObjectId(userId);
     const other = new Types.ObjectId(participantId);
 
-    let conversation = await this.conversationModel.findOne({
+    const existing = await this.conversationModel.find({
       participants: { $all: [me, other], $size: 2 },
     }).populate('participants', 'username firstName lastName avatar isOnline lastSeen')
-      .populate({ path: 'lastMessage', select: 'text sender createdAt' });
-
-    if (!conversation) {
-      const target = await this.userModel.findById(participantId);
-      if (!target) throw new NotFoundException('User not found');
-
-      conversation = await this.conversationModel.create({ participants: [me, other] });
-      conversation = await conversation.populate('participants', 'username firstName lastName avatar isOnline lastSeen');
-    }
-
-    return conversation;
-  }
-
-  // Get all conversations for a user
-  async getConversations(userId: string) {
-    const me = new Types.ObjectId(userId);
-    const conversations = await this.conversationModel
-      .find({ participants: me })
-      .populate('participants', 'username firstName lastName avatar isOnline lastSeen')
-      .populate({ path: 'lastMessage', select: 'text sender createdAt readBy' })
+      .populate({ path: 'lastMessage', select: 'text sender createdAt' })
       .sort({ lastMessageAt: -1, createdAt: -1 });
 
-    return conversations;
+    if (existing.length > 1) {
+      // remove duplicate conversations (keep the first/newest)
+      const [keep, ...dupes] = existing;
+      await this.conversationModel.deleteMany({ _id: { $in: dupes.map(d => d._id) } });
+      return keep;
+    }
+
+    if (existing.length === 1) return existing[0];
+
+    const target = await this.userModel.findById(participantId);
+    if (!target) throw new NotFoundException('User not found');
+
+    const conversation = await this.conversationModel.create({ participants: [me, other] });
+    return conversation.populate('participants', 'username firstName lastName avatar isOnline lastSeen');
+  }
+
+  // Get all conversations for a user (deduplicated by other participant)
+  async getConversations(userId: string) {
+    const me = new Types.ObjectId(userId);
+    const [conversations, blockedIds] = await Promise.all([
+      this.conversationModel
+        .find({ participants: me })
+        .populate('participants', 'username firstName lastName avatar isOnline lastSeen')
+        .populate({ path: 'lastMessage', select: 'text sender createdAt readBy' })
+        .sort({ lastMessageAt: -1, createdAt: -1 }),
+      this.blockService.getBlockedIds(userId),
+    ]);
+
+    const blockedSet = new Set(blockedIds.map((id) => id.toString()));
+
+    // deduplicate: keep only the first (most recent) conversation per other participant
+    const seen = new Set<string>();
+    return conversations
+      .filter(c => {
+        const other = c.participants.find(p => p._id.toString() !== userId);
+        if (!other) return true;
+        const key = other._id.toString();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map(c => {
+        const other = c.participants.find(p => p._id.toString() !== userId);
+        const isBlocked = other ? blockedSet.has(other._id.toString()) : false;
+        return Object.assign(c.toObject ? c.toObject() : c, { isBlocked });
+      });
   }
 
   // Get messages in a conversation
@@ -77,8 +105,24 @@ export class ChatService {
     return messages.reverse();
   }
 
+  // Save a new message — also used for direct userId send (lazy conversation creation)
+  async saveMessageToUser(
+    senderId: string,
+    recipientId: string,
+    text: string,
+    storyReply?: { storyId: string; mediaUrl: string; mediaType: string },
+  ) {
+    const convo = await this.getOrCreateConversation(senderId, recipientId);
+    return this.saveMessage(convo._id.toString(), senderId, text, storyReply);
+  }
+
   // Save a new message (called from gateway)
-  async saveMessage(conversationId: string, senderId: string, text: string) {
+  async saveMessage(
+    conversationId: string,
+    senderId: string,
+    text: string,
+    storyReply?: { storyId: string; mediaUrl: string; mediaType: string },
+  ) {
     const convo = await this.conversationModel.findOne({
       _id: conversationId,
       participants: new Types.ObjectId(senderId),
@@ -89,6 +133,7 @@ export class ChatService {
       conversationId: new Types.ObjectId(conversationId),
       sender: new Types.ObjectId(senderId),
       text,
+      storyReply: storyReply ?? null,
       readBy: [new Types.ObjectId(senderId)],
     });
 

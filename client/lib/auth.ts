@@ -6,7 +6,6 @@ import type {
   RegisterResponse,
   VerifyEmailRequest,
   VerifyEmailResponse,
-  RefreshTokenRequest,
   RefreshTokenResponse,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
@@ -36,9 +35,9 @@ export class AuthAPI {
     return response.data;
   }
 
-  // Refresh access token
-  static async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    const response = await api.post<RefreshTokenResponse>('/auth/refresh-token', data);
+  // Refresh access token — no body, uses httpOnly cookie
+  static async refreshToken(): Promise<RefreshTokenResponse> {
+    const response = await api.post<RefreshTokenResponse>('/auth/refresh-token');
     return response.data;
   }
 

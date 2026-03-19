@@ -3,43 +3,46 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Follow, FollowDocument } from '../../models/follow.model';
 import { User, UserDocument } from '../../models/user.model';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationGateway } from '../notification/notification.gateway';
 
 @Injectable()
 export class FollowService {
   constructor(
     @InjectModel(Follow.name) private followModel: Model<FollowDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly notifService: NotificationService,
+    private readonly notifGateway: NotificationGateway,
   ) {}
 
-  async follow(followerId: string, followingId: string) {
-    if (followerId === followingId) {
-      throw new BadRequestException('You cannot follow yourself');
-    }
-
-    const target = await this.userModel.findById(followingId);
-    if (!target) throw new NotFoundException('User not found');
-
+  async toggle(followerId: string, followingId: string) {
     const existing = await this.followModel.findOne({
       follower: new Types.ObjectId(followerId),
       following: new Types.ObjectId(followingId),
     });
-    if (existing) throw new BadRequestException('Already following');
+
+    if (existing) {
+      await existing.deleteOne();
+      return { following: false };
+    }
 
     await this.followModel.create({
       follower: new Types.ObjectId(followerId),
       following: new Types.ObjectId(followingId),
     });
 
-    return { message: 'Followed successfully' };
-  }
-
-  async unfollow(followerId: string, followingId: string) {
-    const result = await this.followModel.deleteOne({
-      follower: new Types.ObjectId(followerId),
-      following: new Types.ObjectId(followingId),
+    const notif = await this.notifService.create({
+      recipient: followingId,
+      sender: followerId,
+      type: 'follow',
     });
-    if (result.deletedCount === 0) throw new BadRequestException('Not following');
-    return { message: 'Unfollowed successfully' };
+    if (notif) {
+      this.notifGateway.sendToUser(followingId, notif);
+      const count = await this.notifService.getUnreadCount(followingId);
+      this.notifGateway.sendUnreadCount(followingId, count);
+    }
+
+    return { following: true };
   }
 
   async getFollowers(userId: string, page = 1, limit = 20) {
@@ -51,8 +54,7 @@ export class FollowService {
       .skip(skip)
       .limit(limit);
 
-    const total = await this.followModel.countDocuments({ following: new Types.ObjectId(userId) });
-    return { data: follows.map(f => f.follower), total, page, limit };
+    return follows.map(f => f.follower);
   }
 
   async getFollowing(userId: string, page = 1, limit = 20) {
@@ -64,8 +66,7 @@ export class FollowService {
       .skip(skip)
       .limit(limit);
 
-    const total = await this.followModel.countDocuments({ follower: new Types.ObjectId(userId) });
-    return { data: follows.map(f => f.following), total, page, limit };
+    return follows.map(f => f.following);
   }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {

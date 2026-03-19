@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import AuthAPI from '@/lib/auth';
 import { api } from '@/lib/api';
+import { tokenManager } from '@/lib/tokenManager';
 import type { User, RegisterRequest, RegisterResponse } from '@/types/auth';
 
 interface AuthState {
@@ -16,29 +16,21 @@ interface AuthState {
   refreshUser: () => Promise<void>;
 }
 
-const clearTokens = () => {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('sessionId');
-};
-
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
   isInitialized: false,
 
+  /** Called once on app start — tries to get a new access token via httpOnly cookie */
   initialize: async () => {
     if (typeof window === 'undefined') return;
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      set({ isInitialized: true });
-      return;
-    }
     try {
-      const { data } = await api.get<User>('/users/profile');
-      set({ user: data, isInitialized: true });
+      const { data } = await api.post<{ accessToken: string }>('/auth/refresh-token');
+      tokenManager.set(data.accessToken);
+      const profile = await api.get<User>('/users/profile');
+      set({ user: profile.data, isInitialized: true });
     } catch {
-      clearTokens();
+      tokenManager.clear();
       set({ user: null, isInitialized: true });
     }
   },
@@ -46,34 +38,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password, rememberMe = false) => {
     set({ isLoading: true });
     try {
-      const response = await AuthAPI.login({ email, password, rememberMe });
-      localStorage.setItem('accessToken', response.tokens.accessToken);
-      localStorage.setItem('refreshToken', response.tokens.refreshToken);
-      localStorage.setItem('sessionId', response.tokens.sessionId);
-      set({ user: response.user });
+      const { data } = await api.post<{ accessToken: string; user: User }>('/auth/login', {
+        email, password, rememberMe,
+      });
+      tokenManager.set(data.accessToken);
+      set({ user: data.user });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  register: async (data) => {
+  register: async (body) => {
     set({ isLoading: true });
     try {
-      return await AuthAPI.register(data);
+      const { data } = await api.post<RegisterResponse>('/auth/register', body);
+      return data;
     } finally {
       set({ isLoading: false });
     }
   },
 
   logout: async () => {
-    try { await AuthAPI.logout(); } catch { /* token expired — still clear locally */ }
-    clearTokens();
+    try { await api.post('/auth/logout'); } catch { /* cookie cleared by server anyway */ }
+    tokenManager.clear();
     set({ user: null });
   },
 
   logoutAll: async () => {
-    try { await AuthAPI.logoutAll(); } catch {}
-    clearTokens();
+    try { await api.post('/auth/logout-all'); } catch {}
+    tokenManager.clear();
     set({ user: null });
   },
 
@@ -82,7 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await api.get<User>('/users/profile');
       set({ user: data });
     } catch {
-      clearTokens();
+      tokenManager.clear();
       set({ user: null });
     }
   },

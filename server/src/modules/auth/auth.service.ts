@@ -11,7 +11,7 @@ import { DeviceUtil } from '../../common/utils/device.util';
 import { EmailService } from '../../common/services/email.service';
 import { getRequestLang } from '../../common/i18n/i18n';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto, RefreshTokenDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto } from './dto/login.dto';
+import { LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -99,7 +99,7 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto, req: Request): Promise<{ tokens: TokenPair; user: any; isNewDevice: boolean }> {
+  async login(loginDto: LoginDto, req: Request): Promise<{ accessToken: string; refreshToken: string; user: any; isNewDevice: boolean }> {
     const { email, password, rememberMe = false } = loginDto;
 
     // Find user
@@ -193,9 +193,10 @@ export class AuthService {
     const { password: _, ...userWithoutPassword } = user.toJSON();
 
     return {
-      tokens,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: userWithoutPassword,
-      isNewDevice
+      isNewDevice,
     };
   }
 
@@ -218,32 +219,34 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshTokenDto: RefreshTokenDto, req: Request): Promise<{ accessToken: string }> {
-    const { refreshToken } = refreshTokenDto;
+  async refreshTokenFromCookie(
+    refreshToken: string | undefined,
+    req: Request,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    if (!refreshToken) throw new UnauthorizedException('auth.refresh_token_invalid');
 
-    // Verify refresh token
-    const payload = JwtUtil.verifyRefreshToken(refreshToken);
+    JwtUtil.verifyRefreshToken(refreshToken);
 
-    // Find session
     const session = await this.sessionModel.findOne({
       refreshToken,
       isActive: true,
-      expiresAt: { $gt: new Date() }
-    }).populate('userId');
+      expiresAt: { $gt: new Date() },
+    });
 
-    if (!session) {
-      throw new UnauthorizedException('auth.refresh_token_invalid');
-    }
+    if (!session) throw new UnauthorizedException('auth.refresh_token_invalid');
 
-    // Generate new access token
-    const newAccessToken = JwtUtil.refreshAccessToken(refreshToken);
+    const newTokens = JwtUtil.generateTokenPair(
+      session.userId.toString(),
+      session.deviceId.toString(),
+    );
 
-    // Update session with new access token
-    session.accessToken = newAccessToken;
+    session.accessToken = newTokens.accessToken;
+    session.refreshToken = newTokens.refreshToken;
+    session.sessionId = newTokens.sessionId;
     session.lastActivityAt = new Date();
     await session.save();
 
-    return { accessToken: newAccessToken };
+    return { accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken };
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {

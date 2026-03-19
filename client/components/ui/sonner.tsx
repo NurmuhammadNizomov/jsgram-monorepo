@@ -1,14 +1,17 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Toaster as SonnerToaster, toast, type ToasterProps } from "sonner";
 
 function Toaster(props: ToasterProps) {
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <SonnerToaster
-      theme={resolvedTheme as "light" | "dark"}
+      theme={mounted ? (resolvedTheme as "light" | "dark") : "light"}
       position="top-right"
       richColors
       closeButton

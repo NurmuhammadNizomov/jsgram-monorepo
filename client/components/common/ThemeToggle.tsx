@@ -2,7 +2,6 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 
 export function ThemeToggle() {
@@ -28,9 +27,10 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="w-9 h-9">
-        <div className="w-4 h-4" />
-      </Button>
+      <button className="flex items-center gap-3 px-2 xl:px-3 py-3 rounded-xl w-full text-muted-foreground">
+        <div className="w-5 h-5 flex-shrink-0" />
+        <span className="hidden xl:block text-sm font-medium">Theme</span>
+      </button>
     );
   }
 
@@ -65,18 +65,18 @@ export function ThemeToggle() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="w-9 h-9"
+      <button
         onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-3 px-2 xl:px-3 py-3 rounded-xl w-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-sm font-medium"
       >
-        {currentTheme.icon}
-        <span className="sr-only">Toggle theme</span>
-      </Button>
+        <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center">{currentTheme.icon}</span>
+        <span className="hidden xl:block">
+          {theme === "light" ? t("light") : theme === "dark" ? t("dark") : t("system")}
+        </span>
+      </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-36 bg-popover border border-border rounded-lg shadow-lg py-1 z-50">
+        <div className="absolute left-0 top-full mt-2 w-36 bg-popover border border-border rounded-lg shadow-lg py-1 z-50">
           {themes.map((item) => (
             <button
               key={item.key}

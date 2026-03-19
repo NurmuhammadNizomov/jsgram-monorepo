@@ -8,6 +8,13 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { FollowModule } from './modules/follow/follow.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { PostModule } from './modules/post/post.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { StoryModule } from './modules/story/story.module';
+import { HashtagModule } from './modules/hashtag/hashtag.module';
+import { BlockModule } from './modules/block/block.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -24,6 +31,13 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
     AuthModule,
     FollowModule,
     ChatModule,
+    UploadModule,
+    PostModule,
+    CommentModule,
+    NotificationModule,
+    StoryModule,
+    HashtagModule,
+    BlockModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,175 +1,229 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  User, Lock, Bell, Palette, Shield, Smartphone,
-  ChevronRight, LogOut, Trash2, Globe, Moon, Eye, EyeOff,
-  Check,
-} from "lucide-react";
-
-const SECTIONS = [
-  {
-    title: "Account",
-    items: [
-      { icon: User, label: "Edit profile", sub: "Update your name, bio, avatar", href: "profile" },
-      { icon: Lock, label: "Change password", sub: "Update your password", href: "password" },
-      { icon: Globe, label: "Language", sub: "English", href: "language" },
-    ],
-  },
-  {
-    title: "Privacy",
-    items: [
-      { icon: Eye, label: "Account privacy", sub: "Public account", href: "privacy", toggle: true, value: false },
-      { icon: Shield, label: "Blocked users", sub: "Manage blocked accounts", href: "blocked" },
-    ],
-  },
-  {
-    title: "Notifications",
-    items: [
-      { icon: Bell, label: "Push notifications", sub: "Likes, comments, follows", href: "notif-push", toggle: true, value: true },
-      { icon: Bell, label: "Email notifications", sub: "Activity updates via email", href: "notif-email", toggle: true, value: false },
-    ],
-  },
-  {
-    title: "Appearance",
-    items: [
-      { icon: Palette, label: "Theme", sub: "System default", href: "theme" },
-      { icon: Moon, label: "Reduce motion", sub: "Minimize animations", href: "motion", toggle: true, value: false },
-    ],
-  },
-  {
-    title: "Devices",
-    items: [
-      { icon: Smartphone, label: "Active sessions", sub: "Manage your logged-in devices", href: "devices" },
-    ],
-  },
-];
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Camera, Loader2, LogOut, Trash2, Shield } from "lucide-react";
+import { toast } from "sonner";
+import { UserAPI } from "@/lib/social";
 
 export default function SettingsPage() {
-  const user = useAuthStore(s => s.user);
-  const logout = useAuthStore(s => s.logout);
-  const logoutAll = useAuthStore(s => s.logoutAll);
-  const router = useRouter();
-  const [toggles, setToggles] = useState<Record<string, boolean>>({
-    privacy: false,
-    "notif-push": true,
-    "notif-email": false,
-    motion: false,
+  const { user, logout, logoutAll, refreshUser } = useAuthStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+    username: user?.username ?? "",
+    bio: (user as any)?.bio ?? "",
   });
 
-  const displayName = user?.firstName
-    ? `${user.firstName} ${user.lastName ?? ""}`.trim()
-    : user?.username ?? "";
+  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+
+  const profileMut = useMutation({
+    mutationFn: () => UserAPI.updateProfile(profileForm),
+    onSuccess: () => { refreshUser(); toast.success("Profile updated"); },
+    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Update failed"),
+  });
+
+  const avatarMut = useMutation({
+    mutationFn: (file: File) => UserAPI.uploadAvatar(file),
+    onSuccess: () => { refreshUser(); toast.success("Avatar updated"); },
+    onError: () => toast.error("Failed to upload avatar"),
+  });
+
+  const pwMut = useMutation({
+    mutationFn: () => UserAPI.changePassword(pwForm.currentPassword, pwForm.newPassword),
+    onSuccess: () => {
+      setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("Password changed");
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message ?? "Failed to change password"),
+  });
+
+  const deactivateMut = useMutation({
+    mutationFn: () => UserAPI.deactivate(),
+    onSuccess: () => { logout(); },
+  });
+
+  const handleAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) avatarMut.mutate(file);
+    e.target.value = "";
+  };
+
+  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username;
 
   return (
     <div>
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border sticky top-0 bg-background/80 backdrop-blur-md z-10">
-        <h1 className="font-bold text-lg">Settings</h1>
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-5 py-3">
+        <h1 className="text-xl font-bold">Settings</h1>
       </div>
 
-      {/* Profile card */}
-      <div className="px-4 py-4 border-b border-border">
-        <button className="flex items-center gap-3 w-full hover:bg-accent/50 rounded-xl p-2 -mx-2 transition-colors">
-          <Avatar className="w-14 h-14">
-            <AvatarImage src={user?.avatar ?? undefined} />
-            <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-primary to-purple-500 text-primary-foreground">
-              {displayName[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 text-left">
-            <p className="font-semibold">{displayName}</p>
-            <p className="text-sm text-muted-foreground">@{user?.username}</p>
-            <p className="text-xs text-primary mt-0.5">Edit profile →</p>
-          </div>
-        </button>
-      </div>
+      <div className="divide-y divide-border">
+        {/* Profile section */}
+        <section className="px-5 py-6 space-y-5">
+          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Profile</h2>
 
-      {/* Sections */}
-      {SECTIONS.map(section => (
-        <div key={section.title} className="border-b border-border">
-          <p className="px-4 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {section.title}
-          </p>
-          {section.items.map(item => (
-            <button
-              key={item.href}
-              onClick={() => {
-                if ("toggle" in item && item.toggle) {
-                  setToggles(prev => ({ ...prev, [item.href]: !prev[item.href] }));
-                }
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/30 transition-colors"
-            >
-              <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                <item.icon className="w-4 h-4 text-foreground" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium">{item.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {"toggle" in item && item.toggle
-                    ? toggles[item.href] ? "On" : "Off"
-                    : item.sub}
-                </p>
-              </div>
-              {"toggle" in item && item.toggle ? (
-                <div className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${
-                  toggles[item.href] ? "bg-primary justify-end" : "bg-muted-foreground/30 justify-start"
-                }`}>
-                  <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
-                </div>
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      ))}
+          {/* Avatar */}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={user?.avatar ?? ""} />
+                <AvatarFallback className="text-xl">{displayName?.[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <button
+                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5"
+                onClick={() => fileRef.current?.click()}
+              >
+                {avatarMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
+            </div>
+            <div>
+              <p className="font-semibold">{displayName}</p>
+              <p className="text-sm text-muted-foreground">@{user?.username}</p>
+            </div>
+          </div>
 
-      {/* Account actions */}
-      <div className="px-4 py-4 space-y-2">
-        <button
-          onClick={async () => { await logout(); router.replace("/login"); }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border hover:bg-accent/50 transition-colors text-left"
-        >
-          <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <LogOut className="w-4 h-4" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">First name</Label>
+              <Input
+                value={profileForm.firstName}
+                onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Last name</Label>
+              <Input
+                value={profileForm.lastName}
+                onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))}
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Log out</p>
-            <p className="text-xs text-muted-foreground">Log out from this device</p>
-          </div>
-        </button>
 
-        <button
-          onClick={async () => { await logoutAll(); router.replace("/login"); }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border hover:bg-accent/50 transition-colors text-left"
-        >
-          <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <Smartphone className="w-4 h-4" />
+          <div className="space-y-1.5">
+            <Label className="text-xs">Username</Label>
+            <Input
+              value={profileForm.username}
+              onChange={(e) => setProfileForm((p) => ({ ...p, username: e.target.value }))}
+            />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Log out all devices</p>
-            <p className="text-xs text-muted-foreground">Remove all active sessions</p>
-          </div>
-        </button>
 
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-destructive/20 hover:bg-destructive/5 transition-colors text-left">
-          <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center">
-            <Trash2 className="w-4 h-4 text-destructive" />
+          <div className="space-y-1.5">
+            <Label className="text-xs">Bio</Label>
+            <Textarea
+              value={profileForm.bio}
+              onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))}
+              placeholder="Tell people about yourself..."
+              className="resize-none"
+              rows={3}
+            />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-destructive">Delete account</p>
-            <p className="text-xs text-muted-foreground">Permanently delete your account</p>
-          </div>
-        </button>
-      </div>
 
-      <div className="px-4 pb-8 text-center">
-        <p className="text-xs text-muted-foreground">JSGram v1.0.0 · &copy; 2026</p>
+          <Button
+            onClick={() => profileMut.mutate()}
+            disabled={profileMut.isPending}
+            className="w-full"
+          >
+            {profileMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save changes"}
+          </Button>
+        </section>
+
+        {/* Password section */}
+        <section className="px-5 py-6 space-y-4">
+          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <Shield className="w-4 h-4" /> Security
+          </h2>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Current password</Label>
+            <Input
+              type="password"
+              value={pwForm.currentPassword}
+              onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">New password</Label>
+            <Input
+              type="password"
+              value={pwForm.newPassword}
+              onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Confirm new password</Label>
+            <Input
+              type="password"
+              value={pwForm.confirmPassword}
+              onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={
+              pwMut.isPending ||
+              !pwForm.currentPassword ||
+              pwForm.newPassword.length < 6 ||
+              pwForm.newPassword !== pwForm.confirmPassword
+            }
+            onClick={() => pwMut.mutate()}
+          >
+            {pwMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Change password"}
+          </Button>
+        </section>
+
+        {/* Account actions */}
+        <section className="px-5 py-6 space-y-3">
+          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Account</h2>
+
+          <Button variant="outline" className="w-full justify-start gap-2" onClick={() => logout()}>
+            <LogOut className="w-4 h-4" /> Log out
+          </Button>
+
+          <Button variant="outline" className="w-full justify-start gap-2" onClick={() => logoutAll()}>
+            <LogOut className="w-4 h-4" /> Log out all devices
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full justify-start gap-2">
+                <Trash2 className="w-4 h-4" /> Delete account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently deactivate your account. You cannot undo this.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => deactivateMut.mutate()}
+                >
+                  {deactivateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </section>
       </div>
     </div>
   );

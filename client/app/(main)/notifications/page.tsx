@@ -1,137 +1,169 @@
 "use client";
 
-import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heart, MessageCircle, UserPlus, Repeat2, AtSign, Bell } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, UserPlus, AtSign, Bell, Loader2, Check } from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import { NotificationAPI } from "@/lib/social";
+import { tokenManager } from "@/lib/tokenManager";
+import type { Notification } from "@/types/social";
+import { io, Socket } from "socket.io-client";
 
-const TABS = ["All", "Mentions", "Likes", "Follows"];
+dayjs.extend(relativeTime);
 
-type NType = "like" | "comment" | "follow" | "repost" | "mention";
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ?? "http://localhost:3001";
 
-interface Notif {
-  id: number;
-  type: NType;
-  user: string;
-  username: string;
-  text: string;
-  time: string;
-  read: boolean;
-  postPreview?: string;
-}
-
-const NOTIFS: Notif[] = [
-  { id: 1, type: "like", user: "Sardor T.", username: "sardor_codes", text: "liked your post", time: "2m", read: false, postPreview: "Just shipped a new feature in JSGram! Real-time..." },
-  { id: 2, type: "follow", user: "Kamola E.", username: "kamola_ux", text: "started following you", time: "5m", read: false },
-  { id: 3, type: "comment", user: "Jasur M.", username: "jasur_ui", text: "replied to your post", time: "12m", read: false, postPreview: "TypeScript tip: use `satisfies` operator..." },
-  { id: 4, type: "repost", user: "Malika H.", username: "malika_h", text: "reposted your post", time: "30m", read: true, postPreview: "Design systems are not about consistency..." },
-  { id: 5, type: "mention", user: "Bobur A.", username: "bobur_a", text: "mentioned you in a post", time: "1h", read: true },
-  { id: 6, type: "like", user: "Dilnoza Y.", username: "dilnoza_dev", text: "liked your reply", time: "2h", read: true },
-  { id: 7, type: "follow", user: "Zulfiya N.", username: "zulfiya_n", text: "started following you", time: "3h", read: true },
-  { id: 8, type: "like", user: "Azizbek K.", username: "azizbek_k", text: "and 23 others liked your post", time: "5h", read: true, postPreview: "Golden hour shoot in Tashkent 📸..." },
-];
-
-const typeIcon: Record<NType, React.ReactNode> = {
-  like:    <Heart className="w-4 h-4 text-red-500 fill-current" />,
-  comment: <MessageCircle className="w-4 h-4 text-primary" />,
-  follow:  <UserPlus className="w-4 h-4 text-green-500" />,
-  repost:  <Repeat2 className="w-4 h-4 text-green-500" />,
-  mention: <AtSign className="w-4 h-4 text-primary" />,
+const TYPE_ICON: Record<string, React.ReactNode> = {
+  like: <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />,
+  comment: <MessageCircle className="w-3.5 h-3.5 text-blue-500" />,
+  reply: <MessageCircle className="w-3.5 h-3.5 text-cyan-500" />,
+  follow: <UserPlus className="w-3.5 h-3.5 text-green-500" />,
+  mention: <AtSign className="w-3.5 h-3.5 text-violet-500" />,
 };
 
-const typeFilter: Record<string, NType[]> = {
-  "All":     ["like", "comment", "follow", "repost", "mention"],
-  "Mentions": ["mention"],
-  "Likes":   ["like"],
-  "Follows": ["follow"],
+const TYPE_TEXT: Record<string, string> = {
+  like: "liked your post",
+  comment: "commented on your post",
+  reply: "replied to your comment",
+  follow: "started following you",
+  mention: "mentioned you",
 };
+
+type FilterTab = "all" | "mentions" | "likes" | "follows";
 
 export default function NotificationsPage() {
-  const [tab, setTab] = useState("All");
-  const [notifs, setNotifs] = useState(NOTIFS);
+  const [filter, setFilter] = useState<FilterTab>("all");
+  const qc = useQueryClient();
 
-  const filtered = notifs.filter(n => typeFilter[tab].includes(n.type));
-  const unread = notifs.filter(n => !n.read).length;
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ["notifications"],
+    queryFn: ({ pageParam = 1 }) => NotificationAPI.getAll(pageParam as number).then((r) => r.data),
+    initialPageParam: 1,
+    getNextPageParam: (page) => (page as Notification[]).length === 20 ? undefined : undefined,
+  });
 
-  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllMut = useMutation({
+    mutationFn: () => NotificationAPI.markAllRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const markOneMut = useMutation({
+    mutationFn: (id: string) => NotificationAPI.markRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  // Real-time socket
+  useEffect(() => {
+    const token = tokenManager.get();
+    if (!token) return;
+
+    const socket: Socket = io(`${API_URL}/notifications`, {
+      auth: { token },
+      transports: ["websocket"],
+    });
+
+    socket.on("notification", () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    });
+
+    return () => { socket.disconnect(); };
+  }, [qc]);
+
+  const allNotifs = data?.pages.flat() ?? [];
+  const filtered = allNotifs.filter((n) => {
+    if (filter === "all") return true;
+    if (filter === "likes") return n.type === "like";
+    if (filter === "mentions") return n.type === "mention" || n.type === "comment" || n.type === "reply";
+    if (filter === "follows") return n.type === "follow";
+    return true;
+  });
+
+  const tabs: { key: FilterTab; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "mentions", label: "Mentions" },
+    { key: "likes", label: "Likes" },
+    { key: "follows", label: "Follows" },
+  ];
 
   return (
     <div>
-      {/* Header */}
-      <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border z-10">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <h1 className="font-bold text-lg">Notifications</h1>
-            {unread > 0 && (
-              <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-                {unread}
-              </span>
-            )}
-          </div>
-          {unread > 0 && (
-            <button onClick={markAllRead} className="text-xs text-primary hover:underline font-medium">
-              Mark all read
-            </button>
-          )}
-        </div>
-
-        <div className="flex border-b border-border">
-          {TABS.map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-5 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold">Notifications</h1>
+        {allNotifs.some((n) => !n.isRead) && (
+          <Button variant="ghost" size="sm" className="text-xs" onClick={() => markAllMut.mutate()}>
+            <Check className="w-3.5 h-3.5 mr-1" /> Mark all read
+          </Button>
+        )}
       </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Bell className="w-10 h-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No notifications yet</p>
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            className={`flex-1 py-3 text-sm font-medium transition-colors relative ${filter === t.key ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setFilter(t.key)}
+          >
+            {t.label}
+            {filter === t.key && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-full" />}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>No notifications yet</p>
         </div>
       ) : (
-        filtered.map(notif => (
-          <div
-            key={notif.id}
-            className={`flex gap-3 px-4 py-3 border-b border-border/50 hover:bg-accent/30 transition-colors cursor-pointer ${
-              !notif.read ? "bg-primary/5" : ""
-            }`}
-          >
-            {/* Icon overlay on avatar */}
-            <div className="relative flex-shrink-0">
-              <Avatar className="w-10 h-10">
-                <AvatarFallback className="text-sm">{notif.user[0]}</AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background flex items-center justify-center shadow-sm border border-border">
-                {typeIcon[notif.type]}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="text-sm">
-                  <span className="font-semibold">{notif.user}</span>
-                  {" "}
-                  <span className="text-muted-foreground">{notif.text}</span>
+        <div>
+          {filtered.map((notif) => {
+            const senderName = [notif.sender.firstName, notif.sender.lastName].filter(Boolean).join(" ") || notif.sender.username;
+            return (
+              <div
+                key={notif._id}
+                className={`flex items-start gap-3 px-5 py-3.5 border-b border-border hover:bg-muted/30 transition-colors cursor-pointer ${!notif.isRead ? "bg-primary/5" : ""}`}
+                onClick={() => !notif.isRead && markOneMut.mutate(notif._id)}
+              >
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={notif.sender.avatar ?? ""} />
+                    <AvatarFallback>{senderName[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 bg-background rounded-full p-0.5">
+                    {TYPE_ICON[notif.type]}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0">{notif.time}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">
+                    <span className="font-semibold">{senderName}</span>{" "}
+                    <span className="text-muted-foreground">{TYPE_TEXT[notif.type]}</span>
+                  </p>
+                  {notif.post?.content && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.post.content}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">{dayjs(notif.createdAt).fromNow()}</p>
+                </div>
+                {!notif.isRead && <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
+                {notif.post?.images?.[0] && (
+                  <img src={notif.post.images[0].url} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="" />
+                )}
               </div>
-              {notif.postPreview && (
-                <p className="text-xs text-muted-foreground mt-1 truncate">{notif.postPreview}</p>
-              )}
+            );
+          })}
+          {hasNextPage && (
+            <div className="flex justify-center py-6">
+              <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load more"}
+              </Button>
             </div>
-
-            {!notif.read && (
-              <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-            )}
-          </div>
-        ))
+          )}
+        </div>
       )}
     </div>
   );

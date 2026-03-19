@@ -26,15 +26,6 @@ export class LoginDto {
   rememberMe?: boolean;
 }
 
-export class RefreshTokenDto {
-  @ApiProperty({
-    description: 'Refresh token',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-  })
-  @IsString({ message: 'validation.string' })
-  refreshToken: string;
-}
-
 export class VerifyEmailDto {
   @ApiProperty({
     description: 'Email verification token',

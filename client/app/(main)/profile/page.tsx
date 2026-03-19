@@ -1,163 +1,350 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthStore } from "@/store/authStore";
+import { useSearchParams } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Bookmark, Settings, Link as LinkIcon, MapPin, CalendarDays, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Heart, MessageCircle, Bookmark, Grid3x3, FileText, Loader2, Settings, Mail } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import { PostAPI, UserAPI, FollowAPI, StoryAPI } from "@/lib/social";
+import { useAuthStore } from "@/store/authStore";
+import { StoryViewer } from "@/components/stories/StoryViewer";
+import type { Post } from "@/types/social";
+import type { User } from "@/types/auth";
+import { toast } from "sonner";
 
-const TABS = ["Posts", "Replies", "Media", "Likes"];
+dayjs.extend(relativeTime);
 
-const POSTS = [
-  { id: 1, content: "Just shipped a new feature in JSGram! Real-time notifications are live. 🚀", image: true, color: "from-violet-400 to-indigo-500", likes: 142, comments: 28, time: "2h" },
-  { id: 2, content: "TypeScript + NestJS is the perfect combo for backend development. Change my mind.", image: false, likes: 891, comments: 67, time: "1d" },
-  { id: 3, content: "Golden hour in Tashkent never disappoints 📸 #photography #tashkent", image: true, color: "from-orange-300 to-rose-400", likes: 2340, comments: 89, time: "3d" },
-  { id: 4, content: "Design systems are not about consistency — they're about velocity. When your team stops making the same decisions, they focus on what matters.", image: false, likes: 567, comments: 44, time: "1w" },
-  { id: 5, content: "Morning coffee + good music + open-source contribution. Perfect Saturday. ☕", image: true, color: "from-amber-400 to-orange-500", likes: 321, comments: 15, time: "2w" },
-  { id: 6, content: "New blog post: 'Building Real-time Apps with Socket.io and NestJS' — link in bio.", image: false, likes: 435, comments: 32, time: "3w" },
-];
+type Tab = "posts" | "media" | "likes";
+type ListType = "followers" | "following" | null;
 
-const GRID = [
-  "from-violet-400 to-indigo-500",
-  "from-rose-400 to-pink-500",
-  "from-amber-400 to-orange-500",
-  "from-emerald-400 to-teal-500",
-  "from-sky-400 to-blue-500",
-  "from-purple-400 to-pink-500",
-  "from-yellow-400 to-amber-500",
-  "from-cyan-400 to-sky-500",
-  "from-red-400 to-rose-500",
-];
+// ── Followers / Following modal ────────────────────────────────────────────
+function FollowListModal({
+  userId,
+  type,
+  onClose,
+}: {
+  userId: string;
+  type: ListType;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const qc = useQueryClient();
 
+  const listQuery = useQuery({
+    queryKey: ["follow-list", userId, type],
+    queryFn: () =>
+      type === "followers"
+        ? FollowAPI.getFollowers(userId).then((r) => r.data)
+        : FollowAPI.getFollowing(userId).then((r) => r.data),
+    enabled: !!type,
+  });
+
+  const followMut = useMutation({
+    mutationFn: (u: User & { isFollowing?: boolean }) =>
+      FollowAPI.toggle(u._id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["follow-list", userId, type] });
+    },
+  });
+
+  const users = (listQuery.data ?? []) as (User & { isFollowing?: boolean })[];
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-sm p-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-border">
+          <DialogTitle className="capitalize">{type}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {listQuery.isLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : users.length === 0 ? (
+            <p className="text-center py-10 text-muted-foreground text-sm">
+              No {type} yet
+            </p>
+          ) : (
+            users.map((u) => {
+              const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username;
+              return (
+                <div key={u._id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors">
+                  <button
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    onClick={() => { router.push(`/profile?u=${u.username}`); onClose(); }}
+                  >
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage src={(u as any).avatar ?? ""} />
+                      <AvatarFallback>{name[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{name}</p>
+                      <p className="text-muted-foreground text-xs">@{u.username}</p>
+                    </div>
+                  </button>
+                  <Button
+                    variant={u.isFollowing ? "outline" : "default"}
+                    size="sm" className="rounded-full text-xs h-7 px-4 flex-shrink-0 ml-2"
+                    onClick={() => followMut.mutate(u)}
+                    disabled={followMut.isPending}
+                  >
+                    {u.isFollowing ? "Unfollow" : "Follow"}
+                  </Button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Profile page ───────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  const user = useAuthStore(s => s.user);
-  const [tab, setTab] = useState("Posts");
-  const [following, setFollowing] = useState(false);
+  const searchParams = useSearchParams();
+  const identifier = searchParams.get("u");
+  const { user: me } = useAuthStore();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>("posts");
+  const [followList, setFollowList] = useState<ListType>(null);
+  const [storyOpen, setStoryOpen] = useState(false);
 
-  const displayName = user?.firstName
-    ? `${user.firstName} ${user.lastName ?? ""}`.trim()
-    : user?.username ?? "My Profile";
+  const targetId = identifier ?? me?._id ?? "";
+  const isMe = !identifier || identifier === me?._id || identifier === me?.username;
+
+  const profileQuery = useQuery({
+    queryKey: ["profile", targetId],
+    queryFn: () => UserAPI.getByIdentifier(targetId).then((r) => r.data),
+    enabled: !!targetId,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const postsQuery = useQuery({
+    queryKey: ["user-posts", targetId],
+    queryFn: () => PostAPI.getUserPosts(profileQuery.data?._id ?? targetId).then((r) => r.data),
+    enabled: !!profileQuery.data,
+  });
+
+  const storiesQuery = useQuery({
+    queryKey: ["profile-stories", profileQuery.data?._id],
+    queryFn: async () => {
+      const res = await StoryAPI.getByUser(profileQuery.data!._id);
+      return res.data ? [res.data] : [];
+    },
+    enabled: !!profileQuery.data,
+    staleTime: 0,
+  });
+
+  const followMut = useMutation({
+    mutationFn: () => FollowAPI.toggle(profile!._id),
+    onSuccess: (res) => {
+      const isNowFollowing = res.data.following;
+      qc.setQueryData(["profile", targetId], (old: typeof profile) => {
+        if (!old) return old;
+        return {
+          ...old,
+          isFollowing: isNowFollowing,
+          followersCount: (old as any).followersCount + (isNowFollowing ? 1 : -1),
+        };
+      });
+      toast.success(isNowFollowing ? "Followed" : "Unfollowed");
+      qc.invalidateQueries({ queryKey: ["stories-feed"] });
+    },
+  });
+
+  const profile = profileQuery.data;
+  const posts = postsQuery.data ?? [];
+  const mediaPosts = posts.filter((p: Post) => p.images.length > 0);
+
+  if (profileQuery.isLoading) {
+    return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!profile) return null;
+
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.username;
 
   return (
     <div>
-      {/* Cover */}
-      <div className="h-36 md:h-48 bg-gradient-to-br from-primary via-purple-500 to-pink-500 relative">
-        <button className="absolute top-3 right-3 bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-5 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold truncate">{displayName}</h1>
+        {isMe && (
+          <Link href="/settings">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </Link>
+        )}
       </div>
 
-      {/* Profile info */}
-      <div className="px-4 pb-4">
-        {/* Avatar row */}
-        <div className="flex items-end justify-between -mt-10 mb-3">
-          <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
-            <AvatarImage src={user?.avatar ?? undefined} />
-            <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-purple-500 text-primary-foreground">
-              {displayName[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex items-center gap-2 mt-10">
-            <button className="p-2 rounded-full border border-border hover:bg-accent transition-colors">
-              <Settings className="w-4 h-4" />
+      {/* Cover + Avatar */}
+      <div className="relative">
+        <div className="h-32 bg-gradient-to-br from-primary/30 to-violet-500/30" />
+        <div className="px-5 pb-4">
+          <div className="flex items-end justify-between -mt-10 mb-4">
+            {(() => {
+              const hasStory = (storiesQuery.data?.length ?? 0) > 0;
+              return (
+                <button
+                  className={`rounded-full p-0.5 ${hasStory ? "bg-gradient-to-tr from-primary to-violet-500" : "bg-transparent"}`}
+                  onClick={() => hasStory && setStoryOpen(true)}
+                  style={{ cursor: hasStory ? "pointer" : "default" }}
+                >
+                  <Avatar className="w-20 h-20 ring-4 ring-background">
+                    <AvatarImage src={profile.avatar ?? ""} />
+                    <AvatarFallback className="text-2xl">{displayName[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </button>
+              );
+            })()}
+            {isMe ? (
+              <Link href="/settings">
+                <Button variant="outline" size="sm" className="rounded-full">Edit profile</Button>
+              </Link>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant={profile.isFollowing ? "outline" : "default"}
+                  size="sm" className="rounded-full px-5"
+                  onClick={() => followMut.mutate()}
+                  disabled={followMut.isPending}
+                >
+                  {followMut.isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : profile.isFollowing ? "Unfollow" : "Follow"
+                  }
+                </Button>
+                <Link href={`/messages?u=${profile._id}`}>
+                  <Button variant="outline" size="sm" className="rounded-full px-4 gap-1.5">
+                    <Mail className="w-3.5 h-3.5" /> Message
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <h2 className="text-xl font-bold">{displayName}</h2>
+          <p className="text-muted-foreground text-sm">@{profile.username}</p>
+          {(profile as any).bio && <p className="text-sm mt-2">{(profile as any).bio}</p>}
+
+          {/* Stats — bosganda modal ochiladi */}
+          <div className="flex gap-5 mt-4">
+            <div className="text-center">
+              <p className="font-bold text-lg">{posts.length}</p>
+              <p className="text-xs text-muted-foreground">Posts</p>
+            </div>
+            <button
+              className="text-center hover:opacity-70 transition-opacity"
+              onClick={() => setFollowList("followers")}
+            >
+              <p className="font-bold text-lg">{(profile as any).followersCount ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Followers</p>
             </button>
             <button
-              onClick={() => setFollowing(!following)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${
-                following
-                  ? "border border-border hover:bg-accent text-foreground"
-                  : "bg-foreground text-background hover:bg-foreground/90"
-              }`}
+              className="text-center hover:opacity-70 transition-opacity"
+              onClick={() => setFollowList("following")}
             >
-              {following ? "Following" : "Follow"}
+              <p className="font-bold text-lg">{(profile as any).followingCount ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Following</p>
             </button>
-          </div>
-        </div>
-
-        {/* Name & bio */}
-        <div className="space-y-2">
-          <div>
-            <h1 className="font-bold text-xl">{displayName}</h1>
-            <p className="text-muted-foreground text-sm">@{user?.username ?? "username"}</p>
-          </div>
-
-          {user?.bio && <p className="text-sm leading-relaxed">{user.bio}</p>}
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />Tashkent, Uzbekistan</span>
-            <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5" /><span className="text-primary hover:underline cursor-pointer">jsgram.io</span></span>
-            <span className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" />Joined March 2026</span>
-          </div>
-
-          {/* Stats */}
-          <div className="flex gap-5 text-sm">
-            <button className="hover:underline"><span className="font-bold">248</span> <span className="text-muted-foreground">Following</span></button>
-            <button className="hover:underline"><span className="font-bold">3.4K</span> <span className="text-muted-foreground">Followers</span></button>
-            <span><span className="font-bold">{POSTS.length}</span> <span className="text-muted-foreground">Posts</span></span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border sticky top-0 bg-background/80 backdrop-blur-md z-10">
-        {TABS.map(t => (
+      <div className="flex border-b border-border">
+        {(["posts", "media", "likes"] as Tab[]).map((t) => (
           <button
             key={t}
+            className={`flex-1 py-3 text-sm font-medium transition-colors relative capitalize flex items-center justify-center gap-1 ${tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${
-              tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
           >
-            {t}
+            {t === "posts" && <FileText className="w-4 h-4" />}
+            {t === "media" && <Grid3x3 className="w-4 h-4" />}
+            {t === "likes" && <Heart className="w-4 h-4" />}
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {tab === t && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-full" />}
           </button>
         ))}
       </div>
 
       {/* Content */}
-      {tab === "Posts" && (
-        <div>
-          {POSTS.map(post => (
-            <article key={post.id} className="px-4 py-3 border-b border-border hover:bg-accent/20 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="text-xs">{displayName[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-semibold">{displayName}</p>
-                  <p className="text-xs text-muted-foreground">@{user?.username} · {post.time}</p>
-                </div>
+      {postsQuery.isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+      ) : (
+        <>
+          {tab === "posts" && (
+            posts.length === 0 ? (
+              <p className="text-center py-12 text-muted-foreground text-sm">No posts yet</p>
+            ) : (
+              <div>
+                {posts.map((post: Post) => (
+                  <article key={post._id} className="px-5 py-4 border-b border-border">
+                    {post.content && <p className="text-sm">{post.content}</p>}
+                    {post.images[0] && (
+                      <img src={post.images[0].url} className="mt-2 rounded-xl max-h-72 w-full object-cover" alt="" loading="lazy" />
+                    )}
+                    <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1"><Heart className="w-4 h-4" />{post.likesCount}</span>
+                      <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{post.commentsCount}</span>
+                      <span className="flex items-center gap-1"><Bookmark className="w-4 h-4" />{post.bookmarksCount}</span>
+                      <span className="ml-auto">{dayjs(post.createdAt).fromNow()}</span>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <p className="text-sm leading-relaxed mb-2">{post.content}</p>
-              {"color" in post && post.color && (
-                <div className={`rounded-2xl bg-gradient-to-br ${post.color} h-44 w-full mb-2`} />
-              )}
-              <div className="flex items-center gap-5 text-muted-foreground text-xs">
-                <button className="flex items-center gap-1.5 hover:text-red-500 transition-colors">
-                  <Heart className="w-4 h-4" />{post.likes}
-                </button>
-                <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <MessageCircle className="w-4 h-4" />{post.comments}
-                </button>
-                <button className="flex items-center gap-1.5 hover:text-primary transition-colors ml-auto">
-                  <Bookmark className="w-4 h-4" />
-                </button>
+            )
+          )}
+
+          {tab === "media" && (
+            mediaPosts.length === 0 ? (
+              <p className="text-center py-12 text-muted-foreground text-sm">No media yet</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5 p-0.5">
+                {mediaPosts.map((post: Post) => (
+                  <div key={post._id} className="aspect-square">
+                    <img src={post.images[0].url} className="w-full h-full object-cover" alt="" loading="lazy" />
+                  </div>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            )
+          )}
+
+          {tab === "likes" && (
+            <p className="text-center py-12 text-muted-foreground text-sm">Likes are private</p>
+          )}
+        </>
       )}
 
-      {tab === "Media" && (
-        <div className="grid grid-cols-3 gap-0.5 p-0.5">
-          {GRID.map((color, i) => (
-            <div key={i} className={`aspect-square bg-gradient-to-br ${color} cursor-pointer hover:opacity-90 transition-opacity`} />
-          ))}
-        </div>
+      {/* Followers / Following modal */}
+      {followList && (
+        <FollowListModal
+          userId={profile._id}
+          type={followList}
+          onClose={() => {
+            setFollowList(null);
+            qc.invalidateQueries({ queryKey: ["profile", targetId] });
+          }}
+        />
       )}
 
-      {(tab === "Replies" || tab === "Likes") && (
-        <div className="flex flex-col items-center justify-center py-20 gap-2">
-          <p className="text-muted-foreground text-sm">No {tab.toLowerCase()} yet</p>
-        </div>
+      {/* Story viewer */}
+      {storyOpen && (storiesQuery.data?.length ?? 0) > 0 && (
+        <StoryViewer
+          groups={storiesQuery.data!}
+          initialGroupIndex={0}
+          onClose={() => setStoryOpen(false)}
+        />
       )}
     </div>
   );

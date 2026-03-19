@@ -64,10 +64,6 @@ export interface RegisterRequest {
   language?: 'en' | 'uz' | 'ru'; // @IsOptional, @IsString
 }
 
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
 export interface VerifyEmailRequest {
   token: string;
 }
@@ -90,7 +86,7 @@ export interface AuthTokens {
 }
 
 export interface LoginResponse {
-  tokens: AuthTokens;
+  accessToken: string;
   user: User;
   isNewDevice?: boolean;
 }
