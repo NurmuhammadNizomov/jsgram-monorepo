@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { Device } from './device.model';
 
 export type UserDocument = User & Document;
 
@@ -14,11 +15,11 @@ export class User {
   @Prop({ required: true, minlength: 6 })
   password: string;
 
-  @Prop({ required: true, trim: true })
-  firstName: string;
+  @Prop({ trim: true, default: '' })
+  firstName?: string;
 
-  @Prop({ required: true, trim: true })
-  lastName: string;
+  @Prop({ trim: true, default: '' })
+  lastName?: string;
 
   @Prop({ default: null })
   avatar?: string;
@@ -49,6 +50,9 @@ export class User {
 
   @Prop({ default: null })
   emailVerificationToken?: string;
+
+  @Prop({ type: [Types.ObjectId], ref: 'Device', default: [] })
+  devices: Types.ObjectId[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -58,7 +62,7 @@ UserSchema.index({ createdAt: -1 });
 
 // Virtual for full name
 UserSchema.virtual('fullName').get(function() {
-  return `${this.firstName} ${this.lastName}`;
+  return `${this.firstName || ''} ${this.lastName || ''}`.trim();
 });
 
 // Hide sensitive data when converting to JSON

@@ -4,117 +4,102 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import type { RegisterFormData } from "@/types/auth";
 
 export function RegisterForm() {
   const t = useTranslations("auth.register");
+  const router = useRouter();
+  const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState<RegisterFormData>({
+    email: "",
+    password: "",
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1000);
+    try {
+      const response = await register({ email: formData.email, password: formData.password });
+      console.log("Registration successful:", response.message);
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: any } };
+      const data = axiosError.response?.data;
+      const message = typeof data?.message === "string" ? data.message : "Registration failed";
+      const errors = Array.isArray(data?.errors) ? (data.errors as unknown[]) : [];
+      const description = errors.length > 0 ? errors.map(String).join("\n") : undefined;
+      toast.error(message, { description });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-4"
+      transition={{ duration: 0.4 }}
+      className="space-y-3"
     >
-      {/* Main card */}
-      <div className="bg-card border border-border rounded-xl p-6 sm:p-8 space-y-5">
-        <p className="text-center text-muted-foreground font-medium">
-          {t("description")}
-        </p>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-black tracking-tight mb-1">{t("title") || "Create your account"}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
+      </div>
 
-        {/* Social buttons */}
-        <div className="space-y-2.5">
-          <Button
-            className="w-full h-11 bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium"
-            disabled={isLoading}
-          >
-            <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            {t("orContinue")} Facebook
-          </Button>
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-card px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {t("orContinue")}
-            </span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-2.5">
+      {/* Form card */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <Input
-            type="text"
+            type="email"
+            name="email"
             placeholder={t("email")}
+            value={formData.email}
+            onChange={handleChange}
             required
             disabled={isLoading}
-            className="h-[44px] bg-secondary/50 border-border text-sm placeholder:text-muted-foreground/60"
-          />
-
-          <Input
-            type="text"
-            placeholder={t("firstName")}
-            required
-            disabled={isLoading}
-            className="h-[44px] bg-secondary/50 border-border text-sm placeholder:text-muted-foreground/60"
-          />
-
-          <Input
-            type="text"
-            placeholder={t("username")}
-            required
-            disabled={isLoading}
-            className="h-[44px] bg-secondary/50 border-border text-sm placeholder:text-muted-foreground/60"
+            className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
           />
 
           <Input
             type="password"
+            name="password"
             placeholder={t("password")}
+            value={formData.password}
+            onChange={handleChange}
             required
             disabled={isLoading}
-            className="h-[44px] bg-secondary/50 border-border text-sm placeholder:text-muted-foreground/60"
+            className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
           />
 
-          <p className="text-[11px] text-center text-muted-foreground/80 leading-relaxed py-2">
-            People who use our service may have uploaded your contact information to JSGram.{" "}
-            <Link href="#" className="text-violet-500 hover:text-violet-400">
-              Learn More
-            </Link>
-          </p>
-
-          <p className="text-[11px] text-center text-muted-foreground/80 leading-relaxed">
+          <p className="text-[11px] text-center text-muted-foreground leading-relaxed pt-1">
             {t("terms")}{" "}
-            <Link href="#" className="text-violet-500 hover:text-violet-400">
-              {t("termsLink")}
-            </Link>
-            ,{" "}
-            <Link href="#" className="text-violet-500 hover:text-violet-400">
-              {t("privacyLink")}
-            </Link>
+            <Link href="#" className="text-primary hover:underline">{t("termsLink")}</Link>
+            {" & "}
+            <Link href="#" className="text-primary hover:underline">{t("privacyLink")}</Link>
           </p>
 
           <Button
             type="submit"
-            className="w-full h-[44px] bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 hover:from-violet-600 hover:via-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all duration-300"
+            className="w-full h-11 font-bold text-sm"
             disabled={isLoading}
           >
             {isLoading ? (
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
               />
             ) : (
               t("submit")
@@ -123,14 +108,21 @@ export function RegisterForm() {
         </form>
       </div>
 
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-3 text-xs text-muted-foreground">or</span>
+        </div>
+      </div>
+
       {/* Login card */}
-      <div className="bg-card border border-border rounded-xl p-4 text-center">
+      <div className="bg-card border border-border rounded-2xl p-4 text-center">
         <p className="text-sm text-muted-foreground">
           {t("hasAccount")}{" "}
-          <Link
-            href="/login"
-            className="text-violet-500 font-semibold hover:text-violet-400 transition"
-          >
+          <Link href="/login" className="text-primary font-bold hover:underline">
             {t("signIn")}
           </Link>
         </p>

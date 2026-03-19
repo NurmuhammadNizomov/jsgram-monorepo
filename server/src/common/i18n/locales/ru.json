@@ -1,0 +1,41 @@
+{
+  "common.ok": "OK",
+  "common.internal_error": "Внутренняя ошибка сервера",
+  "common.validation_error": "Ошибка валидации",
+  "common.rate_limited": "Слишком много запросов с этого IP, попробуйте позже.",
+
+  "auth.email_exists": "Email уже зарегистрирован",
+  "auth.username_exists": "Имя пользователя уже занято",
+  "auth.invalid_credentials": "Неверный email или пароль",
+  "auth.account_deactivated": "Аккаунт деактивирован",
+  "auth.verify_token_invalid": "Токен подтверждения недействителен или истёк",
+  "auth.refresh_token_invalid": "Refresh-токен недействителен или истёк",
+  "auth.reset_token_invalid": "Токен сброса недействителен или истёк",
+  "auth.no_token": "Токен не предоставлен",
+  "auth.access_token_required": "Требуется access-токен",
+  "auth.access_token_invalid": "Access-токен недействителен или истёк",
+  "auth.register_success": "Регистрация успешна. Проверьте почту для подтверждения.",
+  "auth.email_verified": "Email успешно подтверждён. Теперь вы можете войти в аккаунт.",
+  "auth.forgot_password_sent": "Если аккаунт с таким email существует, ссылка для сброса пароля отправлена.",
+  "auth.password_reset_success": "Пароль успешно изменён. Войдите с новым паролем.",
+  "auth.logout_success": "Вы успешно вышли из аккаунта",
+  "auth.logout_all_success": "Выполнен выход со всех устройств",
+  "auth.device_removed": "Устройство удалено",
+
+  "user.exists": "Пользователь с таким email или именем уже существует",
+  "user.not_found": "Пользователь не найден",
+
+  "validation.string": "Должно быть строкой",
+  "validation.boolean": "Должно быть логическим значением",
+  "validation.email_invalid": "Укажите корректный email адрес",
+  "validation.username_min_3": "Имя пользователя должно быть не короче 3 символов",
+  "validation.username_max_30": "Имя пользователя должно быть не длиннее 30 символов",
+  "validation.username_format": "Имя пользователя может содержать только буквы, цифры и _",
+  "validation.password_min_6": "Пароль должен быть не короче 6 символов",
+  "validation.first_name_min_1": "Имя обязательно",
+  "validation.first_name_max_50": "Имя должно быть не длиннее 50 символов",
+  "validation.last_name_min_1": "Фамилия обязательна",
+  "validation.last_name_max_50": "Фамилия должна быть не длиннее 50 символов",
+  "validation.bio_max_500": "О себе: максимум 500 символов"
+}
+

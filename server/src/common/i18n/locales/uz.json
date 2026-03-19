@@ -1,0 +1,41 @@
+{
+  "common.ok": "OK",
+  "common.internal_error": "Ichki server xatosi",
+  "common.validation_error": "Validatsiya xatosi",
+  "common.rate_limited": "Bu IP’dan juda ko‘p so‘rov yuborildi, keyinroq urinib ko‘ring.",
+
+  "auth.email_exists": "Bu email allaqachon ro‘yxatdan o‘tgan",
+  "auth.username_exists": "Bu username band",
+  "auth.invalid_credentials": "Email yoki parol noto‘g‘ri",
+  "auth.account_deactivated": "Akkount bloklangan",
+  "auth.verify_token_invalid": "Tasdiqlash tokeni noto‘g‘ri yoki muddati o‘tgan",
+  "auth.refresh_token_invalid": "Refresh token noto‘g‘ri yoki muddati o‘tgan",
+  "auth.reset_token_invalid": "Reset token noto‘g‘ri yoki muddati o‘tgan",
+  "auth.no_token": "Token berilmagan",
+  "auth.access_token_required": "Access token kerak",
+  "auth.access_token_invalid": "Access token noto‘g‘ri yoki muddati o‘tgan",
+  "auth.register_success": "Muvaffaqiyatli ro‘yxatdan o‘tdingiz. Emailni tasdiqlash uchun xatni tekshiring.",
+  "auth.email_verified": "Email muvaffaqiyatli tasdiqlandi. Endi login qilishingiz mumkin.",
+  "auth.forgot_password_sent": "Agar bunday email mavjud bo‘lsa, parolni tiklash havolasi yuborildi.",
+  "auth.password_reset_success": "Parol muvaffaqiyatli yangilandi. Yangi parol bilan login qiling.",
+  "auth.logout_success": "Muvaffaqiyatli chiqdingiz",
+  "auth.logout_all_success": "Barcha qurilmalardan chiqildi",
+  "auth.device_removed": "Qurilma o‘chirildi",
+
+  "user.exists": "Bu email yoki username bilan foydalanuvchi allaqachon mavjud",
+  "user.not_found": "Foydalanuvchi topilmadi",
+
+  "validation.string": "Matn (string) bo‘lishi kerak",
+  "validation.boolean": "Boolean bo‘lishi kerak",
+  "validation.email_invalid": "Email manzili noto‘g‘ri",
+  "validation.username_min_3": "Username kamida 3 ta belgidan iborat bo‘lishi kerak",
+  "validation.username_max_30": "Username 30 ta belgidan oshmasligi kerak",
+  "validation.username_format": "Username faqat harf, raqam va _ belgisidan iborat bo‘lishi mumkin",
+  "validation.password_min_6": "Parol kamida 6 ta belgidan iborat bo‘lishi kerak",
+  "validation.first_name_min_1": "Ism kiritilishi shart",
+  "validation.first_name_max_50": "Ism 50 ta belgidan oshmasligi kerak",
+  "validation.last_name_min_1": "Familiya kiritilishi shart",
+  "validation.last_name_max_50": "Familiya 50 ta belgidan oshmasligi kerak",
+  "validation.bio_max_500": "Bio 500 ta belgidan oshmasligi kerak"
+}
+

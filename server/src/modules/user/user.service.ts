@@ -19,7 +19,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email or username already exists');
+      throw new ConflictException('user.exists');
     }
 
     const user = new this.userModel(createUserDto);
@@ -33,19 +33,19 @@ export class UserService {
   async findOne(id: string): Promise<User> {
     const user = await this.userModel.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('user.not_found');
     }
-    return user as User;
+    return user;
   }
 
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.userModel.findOne({ email });
-    return user as User | null;
+    return user || null;
   }
 
   async findByUsername(username: string): Promise<User | null> {
     const user = await this.userModel.findOne({ username });
-    return user as User | null;
+    return user || null;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
@@ -56,7 +56,7 @@ export class UserService {
     );
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('user.not_found');
     }
 
     return user;
@@ -70,7 +70,7 @@ export class UserService {
     );
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('user.not_found');
     }
   }
 

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,7 @@ export default async function RootLayout({
     ? localeCookie as Locale 
     : defaultLocale;
   
-  const messages = await getMessages();
+  const messages = (await import(`../messages/${locale}.json`)).default;
 
   return (
     <html
@@ -43,13 +44,16 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className={`${geistSans.className} min-h-full flex flex-col`}>
-        <ThemeProvider>
-          <NextIntlClientProvider messages={messages} locale={locale}>
-            <QueryProvider>
-              {children}
-            </QueryProvider>
-          </NextIntlClientProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <NextIntlClientProvider messages={messages} locale={locale}>
+              <QueryProvider>
+                {children}
+              </QueryProvider>
+            </NextIntlClientProvider>
+          </ThemeProvider>
+        </AuthProvider>
+        <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
   );

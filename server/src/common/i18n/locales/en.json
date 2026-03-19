@@ -1,0 +1,41 @@
+{
+  "common.ok": "OK",
+  "common.internal_error": "Internal server error",
+  "common.validation_error": "Validation error",
+  "common.rate_limited": "Too many requests from this IP, please try again later.",
+
+  "auth.email_exists": "Email already registered",
+  "auth.username_exists": "Username already taken",
+  "auth.invalid_credentials": "Invalid credentials",
+  "auth.account_deactivated": "Account is deactivated",
+  "auth.verify_token_invalid": "Invalid or expired verification token",
+  "auth.refresh_token_invalid": "Invalid or expired refresh token",
+  "auth.reset_token_invalid": "Invalid or expired reset token",
+  "auth.no_token": "No token provided",
+  "auth.access_token_required": "Access token is required",
+  "auth.access_token_invalid": "Invalid or expired access token",
+  "auth.register_success": "Registration successful. Please check your email for verification.",
+  "auth.email_verified": "Email verified successfully. You can now login to your account.",
+  "auth.forgot_password_sent": "If an account with that email exists, a password reset link has been sent.",
+  "auth.password_reset_success": "Password reset successful. Please login with your new password.",
+  "auth.logout_success": "Logged out successfully",
+  "auth.logout_all_success": "Logged out from all devices successfully",
+  "auth.device_removed": "Device removed successfully",
+
+  "user.exists": "User with this email or username already exists",
+  "user.not_found": "User not found",
+
+  "validation.string": "Must be a string",
+  "validation.boolean": "Must be a boolean",
+  "validation.email_invalid": "Please provide a valid email address",
+  "validation.username_min_3": "Username must be at least 3 characters long",
+  "validation.username_max_30": "Username must be at most 30 characters long",
+  "validation.username_format": "Username can only contain letters, numbers, and underscores",
+  "validation.password_min_6": "Password must be at least 6 characters long",
+  "validation.first_name_min_1": "First name is required",
+  "validation.first_name_max_50": "First name must be at most 50 characters long",
+  "validation.last_name_min_1": "Last name is required",
+  "validation.last_name_max_50": "Last name must be at most 50 characters long",
+  "validation.bio_max_500": "Bio must be at most 500 characters long"
+}
+

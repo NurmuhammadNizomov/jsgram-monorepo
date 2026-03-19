@@ -1,36 +1,29 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import compression from 'compression';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { AppModule } from '../app.module';
-import { AllExceptionsFilter } from '../common/filters/http-exception.filter';
-import { ResponseInterceptor } from '../common/interceptors/response.interceptor';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { log } from './logger';
+import { getRequestLang, t } from '../common/i18n/i18n';
 
-// Request logging middleware
-const requestLogger = (req: any, res: any, next: any) => {
+const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  
-  // Log request
   log.request(req);
-  
-  // Override res.end to log response
-  const originalEnd = res.end;
-  res.end = function(...args: any[]) {
-    const duration = Date.now() - startTime;
-    log.response(req, res.statusCode, duration);
-    originalEnd.apply(this, args);
-  };
-  
+  res.on('finish', () => {
+    log.response(req, res.statusCode, Date.now() - startTime);
+  });
   next();
 };
 
-export const setupMiddleware = async (app: any) => {
-  // Request logging (before everything else)
+export const setupMiddleware = async (app: INestApplication): Promise<void> => {
+  const config = app.get(ConfigService);
+  const nodeEnv = config.get<string>('NODE_ENV') || 'development';
+  const apiPrefix = config.get<string>('API_PREFIX') || 'api/v1';
+  const isProd = nodeEnv === 'production';
+
   app.use(requestLogger);
 
-  // Security headers
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
@@ -43,71 +36,38 @@ export const setupMiddleware = async (app: any) => {
     },
   }));
 
-  // CORS configuration
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://yourdomain.com'] 
-      : ['http://localhost:3000', 'http://localhost:3000'],
+    origin: isProd ? ['https://yourdomain.com'] : ['http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-lang', 'x-request-id'],
   });
 
-  // JSON compression
-  app.use(compression({
-    filter: (req, res) => {
-      if (req.headers['x-no-compression']) {
-        return false;
-      }
-      return compression.filter(req, res);
+  app.use(compression({ threshold: 1024 }));
+
+  app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: isProd ? 100 : 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response, _next: NextFunction, options: { statusCode?: number }) => {
+      const statusCode = options.statusCode ?? 429;
+      res.status(statusCode).json({
+        success: false,
+        statusCode,
+        message: t(getRequestLang(req), 'common.rate_limited'),
+        data: null,
+        code: 'RATE_LIMIT',
+        timestamp: new Date().toISOString(),
+        path: req.originalUrl ?? req.url,
+        method: req.method,
+      });
     },
-    threshold: 1024,
+    skip: (req: Request) => req.url === '/health' || req.url === '/api/health',
   }));
 
-  // Rate limiting
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP
-    message: {
-      error: 'Too many requests from this IP, please try again later.',
-      statusCode: 429,
-    },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    skip: (req) => {
-      // Skip rate limiting for health checks
-      return req.url === '/health' || req.url === '/api/health';
-    },
-  });
-  app.use(limiter);
-
-  // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-  }));
-
-  // Global exception filter
-  app.useGlobalFilters(new AllExceptionsFilter());
-
-  // Global response interceptor
-  app.useGlobalInterceptors(new ResponseInterceptor());
-
-  // Set global prefix
-  const apiPrefix = process.env.API_PREFIX || 'api/v1';
   app.setGlobalPrefix(apiPrefix);
+  (app.getHttpAdapter().getInstance() as Express).set('trust proxy', 1);
 
-  // Trust proxy for rate limiting and IP detection
-  app.set('trust proxy', 1);
-
-  // Log server startup
-  log.info('Middleware setup completed', {
-    environment: process.env.NODE_ENV || 'development',
-    apiPrefix,
-    rateLimitMax: process.env.NODE_ENV === 'production' ? 100 : 1000,
-  });
+  log.info('Middleware setup completed', { environment: nodeEnv, apiPrefix });
 };
