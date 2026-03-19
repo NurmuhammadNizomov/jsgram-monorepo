@@ -110,6 +110,7 @@
       "emailPlaceholder": "Введите email или имя пользователя",
       "passwordLabel": "Пароль",
       "passwordPlaceholder": "Введите пароль",
+      "rememberMe": "Запомнить меня",
       "forgotPassword": "Забыли пароль?",
       "submit": "Войти",
       "submitting": "Вход...",

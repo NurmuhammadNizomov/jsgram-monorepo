@@ -88,17 +88,7 @@ export class AuthService {
 
     await user.save();
 
-    // Send verification email
-    console.log('🔐 Auth Service: Attempting to send verification email to:', email);
-    console.log('🔐 Auth Service: Verification token:', emailVerificationToken);
-    
-    const emailSent = await this.emailService.sendEmailVerification(email, emailVerificationToken);
-    
-    if (emailSent) {
-      console.log('🔐 Auth Service: Verification email sent successfully');
-    } else {
-      console.error('🔐 Auth Service: Failed to send verification email');
-    }
+    await this.emailService.sendEmailVerification(email, emailVerificationToken);
 
     // Return user without sensitive data
     const { password: _, ...userWithoutPassword } = user.toJSON();
@@ -178,6 +168,7 @@ export class AuthService {
     const session = new this.sessionModel({
       userId: user._id,
       deviceId: device._id,
+      sessionId: tokens.sessionId,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresAt,
@@ -276,17 +267,7 @@ export class AuthService {
     user.passwordResetExpires = resetTokenExpires;
     await user.save();
 
-    // Send reset email
-    console.log('🔐 Auth Service: Attempting to send password reset email to:', email);
-    console.log('🔐 Auth Service: Reset token:', resetToken);
-    
-    const emailSent = await this.emailService.sendPasswordReset(email, resetToken);
-    
-    if (emailSent) {
-      console.log('🔐 Auth Service: Password reset email sent successfully');
-    } else {
-      console.error('🔐 Auth Service: Failed to send password reset email');
-    }
+    await this.emailService.sendPasswordReset(email, resetToken);
 
     return {
       message: 'auth.forgot_password_sent'

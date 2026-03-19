@@ -11,6 +11,9 @@ export class Session {
   @Prop({ required: true, type: Types.ObjectId, ref: 'Device' })
   deviceId: Types.ObjectId;
 
+  @Prop({ required: true, unique: true, trim: true })
+  sessionId: string;
+
   @Prop({ required: true, trim: true })
   accessToken: string;
 

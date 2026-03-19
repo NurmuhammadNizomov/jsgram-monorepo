@@ -53,6 +53,12 @@ export class User {
 
   @Prop({ type: [Types.ObjectId], ref: 'Device', default: [] })
   devices: Types.ObjectId[];
+
+  @Prop({ default: null })
+  lastSeen?: Date;
+
+  @Prop({ default: false })
+  isOnline: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

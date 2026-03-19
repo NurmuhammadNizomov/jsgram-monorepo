@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthInitializer } from "@/components/providers/AuthInitializer";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -44,16 +44,16 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className={`${geistSans.className} min-h-full flex flex-col`}>
-        <AuthProvider>
-          <ThemeProvider>
-            <NextIntlClientProvider messages={messages} locale={locale}>
-              <QueryProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            <QueryProvider>
+              <AuthInitializer>
                 {children}
-              </QueryProvider>
-            </NextIntlClientProvider>
-          </ThemeProvider>
-        </AuthProvider>
-        <Toaster richColors closeButton position="top-right" />
+              </AuthInitializer>
+            </QueryProvider>
+          </NextIntlClientProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

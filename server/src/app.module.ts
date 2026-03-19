@@ -6,6 +6,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { FollowModule } from './modules/follow/follow.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -20,6 +22,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
     }),
     UserModule,
     AuthModule,
+    FollowModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

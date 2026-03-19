@@ -8,38 +8,31 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import type { RegisterFormData } from "@/types/auth";
+import { useAuthStore } from "@/store/authStore";
 
 export function RegisterForm() {
   const t = useTranslations("auth.register");
   const router = useRouter();
-  const { register } = useAuth();
+  const register = useAuthStore((s) => s.register);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<RegisterFormData>({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await register({ email: formData.email, password: formData.password });
-      console.log("Registration successful:", response.message);
+      await register({ email: formData.email, password: formData.password });
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: any } };
-      const data = axiosError.response?.data;
+      const data = (error as any)?.response?.data;
       const message = typeof data?.message === "string" ? data.message : "Registration failed";
-      const errors = Array.isArray(data?.errors) ? (data.errors as unknown[]) : [];
-      const description = errors.length > 0 ? errors.map(String).join("\n") : undefined;
-      toast.error(message, { description });
+      const errors = Array.isArray(data?.errors) ? data.errors.map(String) : [];
+      toast.error(message, { description: errors.join("\n") || undefined });
     } finally {
       setIsLoading(false);
     }
@@ -52,13 +45,11 @@ export function RegisterForm() {
       transition={{ duration: 0.4 }}
       className="space-y-3"
     >
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-black tracking-tight mb-1">{t("title") || "Create your account"}</h1>
         <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
 
-      {/* Form card */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input
@@ -90,11 +81,7 @@ export function RegisterForm() {
             <Link href="#" className="text-primary hover:underline">{t("privacyLink")}</Link>
           </p>
 
-          <Button
-            type="submit"
-            className="w-full h-11 font-bold text-sm"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full h-11 font-bold text-sm" disabled={isLoading}>
             {isLoading ? (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -108,7 +95,6 @@ export function RegisterForm() {
         </form>
       </div>
 
-      {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
@@ -118,7 +104,6 @@ export function RegisterForm() {
         </div>
       </div>
 
-      {/* Login card */}
       <div className="bg-card border border-border rounded-2xl p-4 text-center">
         <p className="text-sm text-muted-foreground">
           {t("hasAccount")}{" "}

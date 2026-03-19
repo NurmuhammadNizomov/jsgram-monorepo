@@ -110,6 +110,7 @@
       "emailPlaceholder": "Email yoki foydalanuvchi nomini kiriting",
       "passwordLabel": "Parol",
       "passwordPlaceholder": "Parolni kiriting",
+      "rememberMe": "Meni eslab qol",
       "forgotPassword": "Parolni unutdingizmi?",
       "submit": "Kirish",
       "submitting": "Kirish...",

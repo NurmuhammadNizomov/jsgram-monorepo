@@ -8,13 +8,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/store/authStore";
 import type { LoginFormData } from "@/types/auth";
 
 export function LoginForm() {
   const t = useTranslations("auth.login");
   const router = useRouter();
-  const { login } = useAuth();
+  const login = useAuthStore((s) => s.login);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -22,7 +22,7 @@ export function LoginForm() {
     rememberMe: false,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -30,19 +30,17 @@ export function LoginForm() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await login(formData.email, formData.password, formData.rememberMe);
-      router.push("/");
+      router.push("/feed");
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: any } };
-      const data = axiosError.response?.data;
+      const data = (error as any)?.response?.data;
       const message = typeof data?.message === "string" ? data.message : "Login failed";
-      const errors = Array.isArray(data?.errors) ? (data.errors as unknown[]) : [];
-      const description = errors.length > 0 ? errors.map(String).join("\n") : undefined;
-      toast.error(message, { description });
+      const errors = Array.isArray(data?.errors) ? data.errors.map(String) : [];
+      toast.error(message, { description: errors.join("\n") || undefined });
     } finally {
       setIsLoading(false);
     }
@@ -55,40 +53,34 @@ export function LoginForm() {
       transition={{ duration: 0.4 }}
       className="space-y-3"
     >
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-black tracking-tight mb-1">{t("title") || "Sign in to JSGram"}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle") || "Welcome back!"}</p>
       </div>
 
-      {/* Form card */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <Input
-              type="email"
-              name="email"
-              placeholder={t("emailPlaceholder")}
-              value={formData.email}
-              onChange={handleChange}
-              required
-              disabled={isLoading}
-              className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
-            />
-          </div>
+          <Input
+            type="email"
+            name="email"
+            placeholder={t("emailPlaceholder")}
+            value={formData.email}
+            onChange={handleChange}
+            required
+            disabled={isLoading}
+            className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
+          />
 
-          <div className="space-y-1">
-            <Input
-              type="password"
-              name="password"
-              placeholder={t("passwordPlaceholder")}
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={isLoading}
-              className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
-            />
-          </div>
+          <Input
+            type="password"
+            name="password"
+            placeholder={t("passwordPlaceholder")}
+            value={formData.password}
+            onChange={handleChange}
+            required
+            disabled={isLoading}
+            className="h-11 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
+          />
 
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
@@ -106,11 +98,7 @@ export function LoginForm() {
             </Link>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full h-11 font-bold text-sm mt-1"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full h-11 font-bold text-sm mt-1" disabled={isLoading}>
             {isLoading ? (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -124,7 +112,6 @@ export function LoginForm() {
         </form>
       </div>
 
-      {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
@@ -134,7 +121,6 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* Sign up card */}
       <div className="bg-card border border-border rounded-2xl p-4 text-center">
         <p className="text-sm text-muted-foreground">
           {t("noAccount")}{" "}

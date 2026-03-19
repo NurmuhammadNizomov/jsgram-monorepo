@@ -17,14 +17,6 @@ export class EmailService {
     const smtpUser = this.config.get<string>('SMTP_USER');
     const smtpPass = this.config.get<string>('SMTP_PASS');
 
-    console.log('📧 SMTP Config:', {
-      host: smtpHost,
-      port: smtpPort,
-      user: smtpUser,
-      pass: smtpPass,
-      from: this.from,
-    });
-
     this.transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
