@@ -104,11 +104,13 @@
   "auth": {
     "login": {
       "title": "Welcome back",
+      "subtitle": "Welcome back!",
       "description": "Enter your credentials to access your account",
       "emailLabel": "Email or Username",
       "emailPlaceholder": "Enter your email or username",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
+      "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",
       "submitting": "Signing in...",
@@ -124,6 +126,7 @@
       "username": "Username",
       "email": "Email",
       "password": "Password",
+      "bio": "Bio (optional)",
       "confirmPassword": "Confirm",
       "submit": "Create Account",
       "submitting": "Creating account...",

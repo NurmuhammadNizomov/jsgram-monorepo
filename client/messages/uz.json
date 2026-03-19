@@ -104,6 +104,7 @@
   "auth": {
     "login": {
       "title": "Xush kelibsiz",
+      "subtitle": "Qaytganingizdan xursandmiz!",
       "description": "Akkauntingizga kirish uchun ma'lumotlaringizni kiriting",
       "emailLabel": "Email yoki foydalanuvchi nomi",
       "emailPlaceholder": "Email yoki foydalanuvchi nomini kiriting",
